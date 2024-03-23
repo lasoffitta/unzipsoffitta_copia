@@ -1,4 +1,5 @@
 import os
+import logging
 from flask import Flask
 from telethon import TelegramClient, events
 
@@ -16,14 +17,17 @@ def home():
 
 @telethon_bot.on(events.NewMessage(pattern='/start'))
 async def start(event):
+    logging.info('Received start event: %s', event)
     await event.respond('Ciao! Sono il tuo bot. Per favore, invia o carica un file .zip o .rar.')
     raise events.StopPropagation
 
 @telethon_bot.on(events.NewMessage)
 async def echo(event):
+    logging.info('Received message event: %s', event)
     await event.respond(event.text)
 
 def main():
+    logging.info('Starting bot')
     telethon_bot.start()
     telethon_bot.run_until_disconnected()
 
