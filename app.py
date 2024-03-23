@@ -5,6 +5,7 @@ from telegram.ext import CallbackContext
 import os
 import zipfile
 import rarfile
+import tempfile
 
 app = Flask(__name__)
 
@@ -28,12 +29,18 @@ def handle_document(update: Update, context: CallbackContext) -> None:
     file = context.bot.getFile(update.message.document.file_id)
     filename = file.file_path.split("/")[-1]
     file.download(filename)
-    with zipfile.ZipFile(filename, 'r') as zip_ref:
-        zip_ref.extractall('.')
-    for filename in os.listdir('.'):
-        if os.path.isfile(filename):
-            with open(filename, 'rb') as f:
-                context.bot.send_document(chat_id=update.message.from_user.id, document=InputFile(f))
+    
+    # Crea una cartella temporanea
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Estrai il file nella cartella temporanea
+        with zipfile.ZipFile(filename, 'r') as zip_ref:
+            zip_ref.extractall(temp_dir)
+        
+        # Invia tutti i file estratti
+        for root, dirs, files in os.walk(temp_dir):
+            for file in files:
+                with open(os.path.join(root, file), 'rb') as f:
+                    context.bot.send_document(chat_id=update.message.from_user.id, document=InputFile(f))
 
 start_handler = CommandHandler('start', start)
 echo_handler = MessageHandler(Filters.text & (~Filters.command), echo)
