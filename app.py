@@ -1,7 +1,7 @@
 import os
 from flask import Flask, request
 from telethon import TelegramClient, events
-from telegram import Bot
+from telegram import Bot, Update
 from telegram.ext import CommandHandler, MessageHandler, Filters, Updater
 
 app = Flask(__name__)
@@ -36,7 +36,7 @@ def main():
 
 @app.route('/telegram', methods=['POST'])
 def handle_telegram_update():
-    update = telegram.Update.de_json(request.get_json(force=True), telegram_bot)
+    update = Update.de_json(request.get_json(force=True), telegram_bot)
     updater.dispatcher.process_update(update)
     return 'OK'
 
