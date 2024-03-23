@@ -30,8 +30,15 @@ async def echo(event):
 
 def main():
     telethon_bot.start()
+    telegram_bot.setWebhook('https://unzipbot-lasoffitta.koyeb.app/telegram')
     app.run()
     telethon_bot.run_until_disconnected()
+
+@app.route('/telegram', methods=['POST'])
+def handle_telegram_update():
+    update = telegram.Update.de_json(request.get_json(force=True), telegram_bot)
+    updater.dispatcher.process_update(update)
+    return 'OK'
 
 if __name__ == '__main__':
     main()
