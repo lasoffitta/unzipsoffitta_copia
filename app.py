@@ -1,4 +1,6 @@
 from flask import Flask, request
+from telegram import Bot, Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, MessageHandler, Filters
 import json
 import requests
 import os
@@ -7,40 +9,47 @@ import zipfile
 app = Flask(__name__)
 
 TOKEN = '6925431313:AAHsfhZ9tsGbYhykiOn400djYBpePo-pr6Q'  # Sostituisci con il tuo token di Telegram
+bot = Bot(TOKEN)
+updater = Updater(token=TOKEN, use_context=True)
 
-@app.route('/')
-def hello_world():
-    return 'Hello from Koyeb'
+def start(update, context):
+    context.bot.send_message(chat_id=update.effective_chat.id, text="Benvenuto! Inviami un file .zip o .rar.")
 
-@app.route('/telegram', methods=['POST'])
-def handle_telegram_webhook():
-    data = json.loads(request.data)  # Carica i dati del messaggio
+def handle_document(update, context):
+    file = context.bot.getFile(update.message.document.file_id)
+    file.download(update.message.document.file_name)
 
-    # Controlla se il messaggio è un comando /start
-    if 'text' in data['message'] and data['message']['text'] == '/start':
-        chat_id = data['message']['chat']['id']
-        requests.get(f'https://api.telegram.org/bot{TOKEN}/sendMessage?chat_id={chat_id}&text=Benvenuto! Inviami un file .zip o .rar.')
+    keyboard = [[InlineKeyboardButton("Sì", callback_data='extract')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
 
-    # Controlla se il messaggio contiene un documento
-    elif 'document' in data['message']:
-        file_id = data['message']['document']['file_id']
-        file_name = data['message']['document']['file_name']
+    update.message.reply_text('Vuoi estrarre il file?', reply_markup=reply_markup)
 
-        # Scarica il file
-        file_path = requests.get(f'https://api.telegram.org/bot{TOKEN}/getFile?file_id={file_id}').json()['result']['file_path']
-        file = requests.get(f'https://api.telegram.org/file/bot{TOKEN}/{file_path}')
-        open(file_name, 'wb').write(file.content)
+def handle_callback_query(update, context):
+    query = update.callback_query
+    query.answer()
 
-        # Estrai il file se è un .zip
+    if query.data == 'extract':
+        file_name = query.message.reply_to_message.document.file_name
         if file_name.endswith('.zip'):
             with zipfile.ZipFile(file_name, 'r') as zip_ref:
                 zip_ref.extractall()
 
-            # Invia un messaggio di conferma
-            chat_id = data['message']['chat']['id']
-            requests.get(f'https://api.telegram.org/bot{TOKEN}/sendMessage?chat_id={chat_id}&text=File%20estratto%20con%20successo.')
+            query.edit_message_text(text="File estratto con successo.")
 
+start_handler = CommandHandler('start', start)
+document_handler = MessageHandler(Filters.document, handle_document)
+callback_query_handler = CallbackQueryHandler(handle_callback_query)
+
+updater.dispatcher.add_handler(start_handler)
+updater.dispatcher.add_handler(document_handler)
+updater.dispatcher.add_handler(callback_query_handler)
+
+@app.route('/telegram', methods=['POST'])
+def handle_telegram_webhook():
+    update = Update.de_json(request.get_json(force=True), bot)
+    updater.dispatcher.process_update(update)
     return 'ok'
 
 if __name__ == "__main__":
+    updater.start_polling()
     app.run()
