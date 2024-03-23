@@ -1,8 +1,6 @@
 import os
-from flask import Flask, request
+from flask import Flask
 from telethon import TelegramClient, events
-from telegram import Bot, Update
-from telegram.ext import CommandHandler, MessageHandler, Filters, Updater
 
 app = Flask(__name__)
 
@@ -11,9 +9,6 @@ api_hash = os.environ['TELEGRAM_API_HASH']
 bot_token = os.environ['TELEGRAM_BOT_TOKEN']
 
 telethon_bot = TelegramClient('bot', api_id, api_hash).start(bot_token=bot_token)
-telegram_bot = Bot(bot_token)
-
-updater = Updater(bot=telegram_bot, use_context=True)
 
 @app.route('/')
 def home():
@@ -30,15 +25,7 @@ async def echo(event):
 
 def main():
     telethon_bot.start()
-    telegram_bot.setWebhook('https://unzipbot-lasoffitta.koyeb.app/telegram')
-    app.run()
     telethon_bot.run_until_disconnected()
-
-@app.route('/telegram', methods=['POST'])
-def handle_telegram_update():
-    update = Update.de_json(request.get_json(force=True), telegram_bot)
-    updater.dispatcher.process_update(update)
-    return 'OK'
 
 if __name__ == '__main__':
     main()
