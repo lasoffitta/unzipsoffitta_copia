@@ -16,8 +16,13 @@ def hello_world():
 def handle_telegram_webhook():
     data = json.loads(request.data)  # Carica i dati del messaggio
 
+    # Controlla se il messaggio è un comando /start
+    if 'text' in data['message'] and data['message']['text'] == '/start':
+        chat_id = data['message']['chat']['id']
+        requests.get(f'https://api.telegram.org/bot{TOKEN}/sendMessage?chat_id={chat_id}&text=Benvenuto! Inviami un file .zip o .rar.')
+
     # Controlla se il messaggio contiene un documento
-    if 'document' in data['message']:
+    elif 'document' in data['message']:
         file_id = data['message']['document']['file_id']
         file_name = data['message']['document']['file_name']
 
@@ -31,9 +36,9 @@ def handle_telegram_webhook():
             with zipfile.ZipFile(file_name, 'r') as zip_ref:
                 zip_ref.extractall()
 
-        # Invia un messaggio di conferma
-        chat_id = data['message']['chat']['id']
-        requests.get(f'https://api.telegram.org/bot{TOKEN}/sendMessage?chat_id={chat_id}&text=File%20estratto%20con%20successo.')
+            # Invia un messaggio di conferma
+            chat_id = data['message']['chat']['id']
+            requests.get(f'https://api.telegram.org/bot{TOKEN}/sendMessage?chat_id={chat_id}&text=File%20estratto%20con%20successo.')
 
     return 'ok'
 
