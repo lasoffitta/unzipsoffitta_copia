@@ -1,35 +1,31 @@
+from flask import Flask, request
+from telegram import Bot, Update
+from telegram.ext import Dispatcher, CommandHandler, MessageHandler, Filters
 import os
-import logging
-from flask import Flask
-from telethon import TelegramClient, events
 
 app = Flask(__name__)
 
-api_id = os.environ['TELEGRAM_API_ID']
-api_hash = os.environ['TELEGRAM_API_HASH']
 bot_token = os.environ['TELEGRAM_BOT_TOKEN']
+bot = Bot(bot_token)
+dispatcher = Dispatcher(bot, None, use_context=True)
 
-telethon_bot = TelegramClient('bot', api_id, api_hash).start(bot_token=bot_token)
+@app.route('/telegram', methods=['POST'])
+def webhook():
+    update = Update.de_json(request.get_json(), bot)
+    dispatcher.process_update(update)
+    return "OK"
 
-@app.route('/')
-def home():
-    return "Hello, World!"
+def start(update, context):
+    context.bot.send_message(chat_id=update.effective_chat.id, text='Ciao! Sono il tuo bot. Per favore, invia o carica un file .zip o .rar.')
 
-@telethon_bot.on(events.NewMessage(pattern='/start'))
-async def start(event):
-    logging.info('Received start event: %s', event)
-    await event.respond('Ciao! Sono il tuo bot. Per favore, invia o carica un file .zip o .rar.')
-    raise events.StopPropagation
+def echo(update, context):
+    context.bot.send_message(chat_id=update.effective_chat.id, text=update.message.text)
 
-@telethon_bot.on(events.NewMessage)
-async def echo(event):
-    logging.info('Received message event: %s', event)
-    await event.respond(event.text)
+start_handler = CommandHandler('start', start)
+echo_handler = MessageHandler(Filters.text & (~Filters.command), echo)
 
-def main():
-    logging.info('Starting bot')
-    telethon_bot.start()
-    telethon_bot.run_until_disconnected()
+dispatcher.add_handler(start_handler)
+dispatcher.add_handler(echo_handler)
 
 if __name__ == '__main__':
-    main()
+    app.run(port=8000)
