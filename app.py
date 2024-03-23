@@ -23,21 +23,16 @@ def start(update, context):
 def echo(update, context):
     context.bot.send_message(chat_id=update.effective_chat.id, text=update.message.text)
 
-def handle_document(update, context):
-    file = context.bot.get_file(update.message.document.file_id)
-    file.download('file.rar')
-
-    if rarfile.is_rarfile('file.rar'):
-        with rarfile.RarFile('file.rar') as rf:
-            rf.extractall()
-    elif zipfile.is_zipfile('file.rar'):
-        with zipfile.ZipFile('file.rar') as zf:
-            zf.extractall()
-
+def handle_document(update: Update, context: CallbackContext) -> None:
+    file = context.bot.getFile(update.message.document.file_id)
+    filename = file.file_path.split("/")[-1]
+    file.download(filename)
+    with zipfile.ZipFile(filename, 'r') as zip_ref:
+        zip_ref.extractall('.')
     for filename in os.listdir('.'):
         if os.path.isfile(filename):
             with open(filename, 'rb') as f:
-                context.bot.send_document(chat_id='6925431313', document=InputFile(f))
+                context.bot.send_document(chat_id=update.message.from_user.id, document=InputFile(f))
 
 start_handler = CommandHandler('start', start)
 echo_handler = MessageHandler(Filters.text & (~Filters.command), echo)
