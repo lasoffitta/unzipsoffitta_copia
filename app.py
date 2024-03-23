@@ -1,55 +1,23 @@
-from flask import Flask, request
-from telegram import Bot, Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, MessageHandler, Filters
-import json
-import requests
 import os
-import zipfile
+from telethon import TelegramClient, events
 
-app = Flask(__name__)
+api_id = os.environ['TELEGRAM_API_ID']
+api_hash = os.environ['TELEGRAM_API_HASH']
+bot_token = os.environ['TELEGRAM_BOT_TOKEN']
 
-TOKEN = '6925431313:AAHsfhZ9tsGbYhykiOn400djYBpePo-pr6Q'  # Sostituisci con il tuo token di Telegram
-bot = Bot(TOKEN)
-updater = Updater(token=TOKEN, use_context=True)
+bot = TelegramClient('bot', api_id, api_hash).start(bot_token=bot_token)
 
-def start(update, context):
-    context.bot.send_message(chat_id=update.effective_chat.id, text="Benvenuto! Inviami un file .zip o .rar.")
+@bot.on(events.NewMessage(pattern='/start'))
+async def start(event):
+    await event.respond('Ciao! Sono il tuo bot. Per favore, invia o carica un file .zip o .rar.')
+    raise events.StopPropagation
 
-def handle_document(update, context):
-    file = context.bot.getFile(update.message.document.file_id)
-    file.download(update.message.document.file_name)
+@bot.on(events.NewMessage)
+async def echo(event):
+    await event.respond(event.text)
 
-    keyboard = [[InlineKeyboardButton("Sì", callback_data='extract')]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+def main():
+    bot.run_until_disconnected()
 
-    update.message.reply_text('Vuoi estrarre il file?', reply_markup=reply_markup)
-
-def handle_callback_query(update, context):
-    query = update.callback_query
-    query.answer()
-
-    if query.data == 'extract':
-        file_name = query.message.reply_to_message.document.file_name
-        if file_name.endswith('.zip'):
-            with zipfile.ZipFile(file_name, 'r') as zip_ref:
-                zip_ref.extractall()
-
-            query.edit_message_text(text="File estratto con successo.")
-
-start_handler = CommandHandler('start', start)
-document_handler = MessageHandler(Filters.document, handle_document)
-callback_query_handler = CallbackQueryHandler(handle_callback_query)
-
-updater.dispatcher.add_handler(start_handler)
-updater.dispatcher.add_handler(document_handler)
-updater.dispatcher.add_handler(callback_query_handler)
-
-@app.route('/telegram', methods=['POST'])
-def handle_telegram_webhook():
-    update = Update.de_json(request.get_json(force=True), bot)
-    updater.dispatcher.process_update(update)
-    return 'ok'
-
-if __name__ == "__main__":
-    updater.start_polling()
-    app.run()
+if __name__ == '__main__':
+    main()
