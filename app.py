@@ -32,16 +32,25 @@ def handle_document(update: Update, context: CallbackContext) -> None:
     
     # Crea una cartella temporanea
     with tempfile.TemporaryDirectory() as temp_dir:
-        # Estrai il file nella cartella temporanea
-        with zipfile.ZipFile(filename, 'r') as zip_ref:
-            zip_ref.extractall(temp_dir)
-        
+        # Controlla l'estensione del file
+        if filename.endswith('.zip'):
+            # Estrai il file .zip nella cartella temporanea
+            with zipfile.ZipFile(filename, 'r') as zip_ref:
+                zip_ref.extractall(temp_dir)
+        elif filename.endswith('.rar'):
+            # Estrai il file .rar nella cartella temporanea
+            with rarfile.RarFile(filename, 'r') as rar_ref:
+                rar_ref.extractall(temp_dir)
+        else:
+            context.bot.send_message(chat_id=update.message.from_user.id, text='Per favore, invia un file .zip o .rar.')
+            return
+
         # Invia tutti i file estratti
         for root, dirs, files in os.walk(temp_dir):
             for file in files:
                 with open(os.path.join(root, file), 'rb') as f:
                     context.bot.send_document(chat_id=update.message.from_user.id, document=InputFile(f))
-
+                    
 start_handler = CommandHandler('start', start)
 echo_handler = MessageHandler(Filters.text & (~Filters.command), echo)
 document_handler = MessageHandler(Filters.document, handle_document)
