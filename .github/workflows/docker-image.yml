@@ -23,4 +23,4 @@ jobs:
       with:
         context: .
         push: true
-        tags: peterlongx/peter_unzip:latest
+        tags: lasoffitta/unzipsoffitta_copia:latest
