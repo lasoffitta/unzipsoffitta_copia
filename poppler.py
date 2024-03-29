@@ -27,6 +27,9 @@ def index():
 def start(update, context):
     context.bot.send_message(chat_id=update.effective_chat.id, text='Ciao! Sono il tuo bot. Per favore, invia o carica un file .pdf.')
 
+def echo(update, context):
+    context.bot.send_message(chat_id=update.effective_chat.id, text=update.message.text)
+
 def get_pdf_images(pdf_path, output_folder):
     images = convert_from_path(pdf_path)
     image_paths = []
