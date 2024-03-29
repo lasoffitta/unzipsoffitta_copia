@@ -23,4 +23,4 @@ jobs:
       with:
         context: .
         push: true
-        tags: lasoffitta/unzipsoffitta_copia:latest
+        tags: lasoffitta/poppler:latest
