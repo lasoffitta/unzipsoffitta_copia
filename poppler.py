@@ -3,9 +3,10 @@ from telegram import Bot, Update, InputFile
 from telegram.ext import Dispatcher, CommandHandler, MessageHandler, Filters
 from telegram.ext import CallbackContext
 import os
-import zipfile
-import rarfile
 import tempfile
+import zipfile
+from PyPDF2 import PdfFileReader
+from pdf2image import convert_from_path
 
 app = Flask(__name__)
 
@@ -19,38 +20,41 @@ def webhook():
     dispatcher.process_update(update)
     return "OK"
 
-def start(update, context):
-    context.bot.send_message(chat_id=update.effective_chat.id, text='Ciao! Sono il tuo bot. Per favore, invia o carica un file .zip o .rar.')
+@app.route('/')
+def index():
+    return "Hello, World!"
 
-def echo(update, context):
-    context.bot.send_message(chat_id=update.effective_chat.id, text=update.message.text)
+def get_pdf_images(pdf_path, output_folder):
+    images = convert_from_path(pdf_path)
+    image_paths = []
+    for i, image in enumerate(images):
+        image_path = os.path.join(output_folder, f"page_{i+1}.jpg")
+        image.save(image_path, "JPEG")
+        image_paths.append(image_path)
+    return image_paths
+
+def create_cbz_from_images(image_paths, output_path):
+    with zipfile.ZipFile(output_path, 'w') as cbz_file:
+        for image_path in image_paths:
+            cbz_file.write(image_path, os.path.basename(image_path))
 
 def handle_document(update: Update, context: CallbackContext) -> None:
     file = context.bot.getFile(update.message.document.file_id)
     filename = file.file_path.split("/")[-1]
     file.download(filename)
     
-    # Crea una cartella temporanea
+    # Create a temporary directory
     with tempfile.TemporaryDirectory() as temp_dir:
-        # Controlla l'estensione del file
-        if filename.endswith('.zip'):
-            # Estrai il file .zip nella cartella temporanea
-            with zipfile.ZipFile(filename, 'r') as zip_ref:
-                zip_ref.extractall(temp_dir)
-        elif filename.endswith('.rar'):
-            # Estrai il file .rar nella cartella temporanea
-            with rarfile.RarFile(filename, 'r') as rar_ref:
-                rar_ref.extractall(temp_dir)
-        else:
-            context.bot.send_message(chat_id=update.message.from_user.id, text='Per favore, invia un file .zip o .rar.')
-            return
-
-        # Invia tutti i file estratti
-        for root, dirs, files in os.walk(temp_dir):
-            for file in files:
-                with open(os.path.join(root, file), 'rb') as f:
-                    context.bot.send_document(chat_id=update.message.from_user.id, document=InputFile(f))
-                    
+        # Extract images from the PDF file
+        image_paths = get_pdf_images(filename, temp_dir)
+        # Create CBZ file from the extracted images
+        cbz_path = os.path.join(temp_dir, os.path.splitext(filename)[0] + ".cbz")
+        create_cbz_from_images(image_paths, cbz_path)
+        
+        # Send the CBZ file back to the user
+        with open(cbz_path, 'rb') as cbz_file:
+            context.bot.send_document(chat_id=update.message.chat_id, document=InputFile(cbz_file))
+    
 start_handler = CommandHandler('start', start)
 echo_handler = MessageHandler(Filters.text & (~Filters.command), echo)
 document_handler = MessageHandler(Filters.document, handle_document)
