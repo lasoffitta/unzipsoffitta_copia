@@ -9,3 +9,5 @@ MarkupSafe==2.1.1
 Werkzeug==2.2.2
 python-telegram-bot==13.7
 rarfile
+PyPDF2
+pdf2image
