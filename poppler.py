@@ -24,6 +24,9 @@ def webhook():
 def index():
     return "Hello, World!"
 
+def start(update, context):
+    context.bot.send_message(chat_id=update.effective_chat.id, text='Ciao! Sono il tuo bot. Per favore, invia o carica un file .pdf.')
+
 def get_pdf_images(pdf_path, output_folder):
     images = convert_from_path(pdf_path)
     image_paths = []
